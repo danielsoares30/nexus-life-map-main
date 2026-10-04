@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getLevelTitle, calculateXpForLevel } from "@/lib/gameData";
 import { getArchetype } from "@/lib/archetypes";
 import defaultAvatar from "@/assets/default-avatar.png";
+import NexusOracle from "@/components/ai/NexusOracle";
 
 const navItems = [
   { path: "/app", label: "Meu Dia", icon: LayoutDashboard },
@@ -173,6 +174,9 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Global AI Oracle */}
+      <NexusOracle />
     </div>
   );
 }

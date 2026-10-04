@@ -5,7 +5,7 @@ import {
   Target, Flame, Clock, Star, Zap, TrendingUp, Trophy, Filter,
   BookOpen, Briefcase, Heart, Dumbbell, DollarSign, Brain, Users,
   LayoutGrid, List, Search, X, Flag, ArrowRight, CheckCircle2,
-  AlertCircle, Circle, Pause, Archive,
+  AlertCircle, Circle, Pause, Archive, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { useObjectives, useProjects, LIFE_AREAS, PRIORITIES, STATUSES, computeProgress } from "@/hooks/usePlanning";
 import { useTasks, useProfile } from "@/hooks/useGameData";
 import { toast } from "@/hooks/use-toast";
+import AiQuestGeneratorModal from "@/components/ai/AiQuestGeneratorModal";
 
 type Kind = "objective" | "project";
 
@@ -86,6 +87,7 @@ export default function Objectives() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"objectives" | "projects">("objectives");
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const store = activeTab === "objective" as any ? objectives : objectives;
   const kind: Kind = activeTab === "objectives" ? "objective" : "project";
@@ -161,9 +163,17 @@ export default function Objectives() {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Defina onde quer chegar e construa o caminho para lá.</p>
           </div>
-          <Button onClick={openNew} className="gap-2 shrink-0">
-            <Plus className="h-4 w-4" /> Nova {label}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <Button
+              onClick={() => setAiModalOpen(true)}
+              className="gap-2 bg-gradient-to-r from-amber-500 to-primary text-primary-foreground hover:opacity-90 shadow-sm border border-amber-400/30"
+            >
+              <Sparkles className="h-4 w-4" /> Desmembrar com IA
+            </Button>
+            <Button onClick={openNew} className="gap-2">
+              <Plus className="h-4 w-4" /> Nova {label}
+            </Button>
+          </div>
         </div>
       </motion.div>
 
@@ -555,6 +565,9 @@ export default function Objectives() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AI Quest Decomposer Modal */}
+      <AiQuestGeneratorModal open={aiModalOpen} onOpenChange={setAiModalOpen} />
     </div>
   );
 }

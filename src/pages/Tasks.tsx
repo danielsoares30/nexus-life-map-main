@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useTasks, useProfile, useAchievementChecker } from "@/hooks/useGameData";
 import { toast } from "@/hooks/use-toast";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import AiQuestGeneratorModal from "@/components/ai/AiQuestGeneratorModal";
 
 const categories: (TaskCategory | "all")[] = ["all", "work", "study", "health", "personal", "spiritual", "projects"];
 
@@ -24,6 +25,7 @@ export default function Tasks() {
   });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<any>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [form, setForm] = useState({ title: "", category: "work", difficulty: "medium", priority: "medium", recurring: "", due_date: "" });
@@ -886,6 +888,9 @@ export default function Tasks() {
           <p className="text-sm text-muted-foreground mt-1">Complete missões para ganhar XP e evoluir seus atributos.</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={() => setAiModalOpen(true)} size="sm" className="gap-1.5 bg-gradient-to-r from-amber-500 to-primary text-primary-foreground hover:opacity-90 shadow-sm border border-amber-400/30">
+            <Sparkles className="h-4 w-4" /> Gerar com IA
+          </Button>
           <Button onClick={() => setSuggestionsOpen(true)} size="sm" variant="outline" className="gap-1.5 border-primary/50 text-primary hover:bg-primary/10">
             <Lightbulb className="h-4 w-4" /> Sugestões
           </Button>
@@ -1401,6 +1406,9 @@ export default function Tasks() {
           </Button>
         </DialogContent>
       </Dialog>
+
+      {/* AI Quest Generator Modal */}
+      <AiQuestGeneratorModal open={aiModalOpen} onOpenChange={setAiModalOpen} />
     </div>
     )
   );
