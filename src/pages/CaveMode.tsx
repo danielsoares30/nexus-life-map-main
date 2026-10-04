@@ -634,11 +634,15 @@ function ActiveChallenge({
       </AnimatePresence>
 
       <Tabs defaultValue="today" className="w-full">
-        <TabsList className="grid grid-cols-6 w-full">
+        <TabsList className="grid grid-cols-4 w-full mb-1">
           <TabsTrigger value="today" className="text-xs">Hoje</TabsTrigger>
           <TabsTrigger value="intention" className="text-xs">Intenção</TabsTrigger>
           <TabsTrigger value="focus" className="text-xs">Foco</TabsTrigger>
           <TabsTrigger value="analysis" className="text-xs">Análise</TabsTrigger>
+        </TabsList>
+        <TabsList className="grid grid-cols-4 w-full">
+          <TabsTrigger value="warjournal" className="text-xs">📖 Diário</TabsTrigger>
+          <TabsTrigger value="quantumhabits" className="text-xs">⚡ Hábitos</TabsTrigger>
           <TabsTrigger value="history" className="text-xs">Histórico</TabsTrigger>
           <TabsTrigger value="settings" className="text-xs">Regras</TabsTrigger>
         </TabsList>
@@ -657,6 +661,14 @@ function ActiveChallenge({
 
         <TabsContent value="analysis" className="mt-4">
           <AnalysisPanel logs={logs} challenge={challenge} />
+        </TabsContent>
+
+        <TabsContent value="warjournal" className="mt-4">
+          <WarJournal challengeId={challenge.id} dayNumber={dayNumber} motivation={challenge.motivation} />
+        </TabsContent>
+
+        <TabsContent value="quantumhabits" className="mt-4">
+          <QuantumHabits challengeId={challenge.id} logs={logs} />
         </TabsContent>
 
         <TabsContent value="history" className="mt-4">
@@ -1498,3 +1510,341 @@ function MilestoneModal({ day, data, onClose }: { day: number; data: { label: st
     </motion.div>
   );
 }
+
+// ---------- War Journal ----------
+type JournalEntry = { date: string; gratitude: string; obstacle: string; lesson: string; wins: string };
+
+function WarJournal({ challengeId, dayNumber, motivation }: { challengeId: string; dayNumber: number; motivation: string }) {
+  const key = `cave_journal_${challengeId}`;
+  const loadAll = (): JournalEntry[] => { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } };
+  const [entries, setEntries] = useState<JournalEntry[]>(loadAll);
+  const today = todayStr();
+  const todayEntry = entries.find(e => e.date === today) || { date: today, gratitude: "", obstacle: "", wins: "", lesson: "" };
+  const [form, setForm] = useState(todayEntry);
+  const [saved, setSaved] = useState(false);
+  const [viewAll, setViewAll] = useState(false);
+
+  const save = () => {
+    const updated = entries.filter(e => e.date !== today);
+    updated.push(form);
+    updated.sort((a, b) => b.date.localeCompare(a.date));
+    setEntries(updated);
+    localStorage.setItem(key, JSON.stringify(updated));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-card">
+        <CardHeader className="pb-3">
+          <CardTitle className="font-display text-base flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-primary" />
+            Diário do Guerreiro — Dia {dayNumber}
+          </CardTitle>
+          <CardDescription className="text-xs italic">"{motivation}"</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label className="text-xs text-amber-400 mb-1.5 block">🌟 3 coisas pelas quais sou grato hoje</Label>
+            <Textarea
+              value={form.gratitude}
+              onChange={e => setForm({ ...form, gratitude: e.target.value })}
+              placeholder="1. ... 2. ... 3. ..."
+              rows={3}
+              className="resize-none text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-emerald-400 mb-1.5 block">🏆 Minhas maiores vitórias de hoje</Label>
+            <Textarea
+              value={form.wins}
+              onChange={e => setForm({ ...form, wins: e.target.value })}
+              placeholder="O que eu conquistei? O que funcionou?"
+              rows={2}
+              className="resize-none text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-destructive mb-1.5 block">⚔️ Principal obstáculo enfrentado</Label>
+            <Textarea
+              value={form.obstacle}
+              onChange={e => setForm({ ...form, obstacle: e.target.value })}
+              placeholder="O que me desafiou? Como reagi?"
+              rows={2}
+              className="resize-none text-sm"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-blue-400 mb-1.5 block">💡 Maior aprendizado do dia</Label>
+            <Textarea
+              value={form.lesson}
+              onChange={e => setForm({ ...form, lesson: e.target.value })}
+              placeholder="O que aprendi que vou aplicar amanhã?"
+              rows={2}
+              className="resize-none text-sm"
+            />
+          </div>
+          <Button onClick={save} className={`w-full gap-2 transition-all ${saved ? "bg-emerald-600 hover:bg-emerald-700" : ""}`}>
+            {saved ? <><Check className="h-4 w-4" /> Salvo!</> : <><BookOpen className="h-4 w-4" /> Salvar Entrada do Diário</>}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Past entries */}
+      {entries.length > 1 && (
+        <div>
+          <button
+            onClick={() => setViewAll(v => !v)}
+            className="flex items-center gap-2 text-xs text-primary hover:text-primary/80 mb-3"
+          >
+            {viewAll ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            Ver entradas anteriores ({entries.filter(e => e.date !== today).length})
+          </button>
+          {viewAll && (
+            <div className="space-y-3">
+              {entries.filter(e => e.date !== today).map(e => (
+                <Card key={e.date} className="bg-secondary/30">
+                  <CardHeader className="py-3 px-4">
+                    <CardTitle className="text-xs text-muted-foreground">{new Date(e.date + "T12:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4 space-y-2">
+                    {e.wins && <p className="text-xs"><span className="text-emerald-400 font-bold">🏆</span> {e.wins}</p>}
+                    {e.lesson && <p className="text-xs"><span className="text-blue-400 font-bold">💡</span> {e.lesson}</p>}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Quantum Habits ----------
+const DEFAULT_QUANTUM_HABITS = [
+  { id: "agua", label: "2L de água", icon: "💧", category: "saude" },
+  { id: "exercicio", label: "Exercício físico", icon: "🏋️", category: "corpo" },
+  { id: "meditacao", label: "Meditação", icon: "🧘", category: "mente" },
+  { id: "leitura", label: "Leitura 20min+", icon: "📚", category: "mente" },
+  { id: "semtela", label: "Sem telas 1h antes de dormir", icon: "📵", category: "sono" },
+  { id: "gratidao", label: "Gratidão escrita", icon: "📝", category: "mente" },
+  { id: "frio", label: "Banho frio", icon: "🚿", category: "corpo" },
+  { id: "dormicedo", label: "Dormir antes das 23h", icon: "🌙", category: "sono" },
+  { id: "semjunk", label: "Sem junk food", icon: "🥗", category: "saude" },
+  { id: "proteina", label: "Proteína na dieta", icon: "🥩", category: "saude" },
+];
+
+function QuantumHabits({ challengeId, logs }: { challengeId: string; logs: DailyLog[] }) {
+  const storageKey = `cave_qhabits_config_${challengeId}`;
+  const logKey = `cave_qhabits_log_${challengeId}`;
+  const today = todayStr();
+
+  const [selected, setSelected] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { return DEFAULT_QUANTUM_HABITS.slice(0, 6).map(h => h.id); }
+  });
+  const [dailyLogs, setDailyLogs] = useState<Record<string, string[]>>(() => {
+    try { return JSON.parse(localStorage.getItem(logKey) || "{}"); } catch { return {}; }
+  });
+  const [configMode, setConfigMode] = useState(false);
+  const [newHabit, setNewHabit] = useState("");
+  const [customHabits, setCustomHabits] = useState<typeof DEFAULT_QUANTUM_HABITS>(() => {
+    try { return JSON.parse(localStorage.getItem(`${storageKey}_custom`) || "[]"); } catch { return []; }
+  });
+
+  const allHabits = [...DEFAULT_QUANTUM_HABITS, ...customHabits].filter(h => selected.includes(h.id));
+  const todayDone = dailyLogs[today] || [];
+
+  const toggleHabit = (id: string) => {
+    const updated = todayDone.includes(id)
+      ? todayDone.filter(h => h !== id)
+      : [...todayDone, id];
+    const newLogs = { ...dailyLogs, [today]: updated };
+    setDailyLogs(newLogs);
+    localStorage.setItem(logKey, JSON.stringify(newLogs));
+  };
+
+  const toggleSelect = (id: string) => {
+    const updated = selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id];
+    setSelected(updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+  };
+
+  const addCustom = () => {
+    if (!newHabit.trim()) return;
+    const id = `custom_${Date.now()}`;
+    const h = { id, label: newHabit.trim(), icon: "⚡", category: "custom" };
+    const updated = [...customHabits, h];
+    setCustomHabits(updated);
+    localStorage.setItem(`${storageKey}_custom`, JSON.stringify(updated));
+    setSelected(s => { const n = [...s, id]; localStorage.setItem(storageKey, JSON.stringify(n)); return n; });
+    setNewHabit("");
+  };
+
+  // Streak calculation per habit
+  const getStreak = (habitId: string) => {
+    let streak = 0;
+    const sortedDates = Object.keys(dailyLogs).sort((a, b) => b.localeCompare(a));
+    for (const date of sortedDates) {
+      if ((dailyLogs[date] || []).includes(habitId)) streak++;
+      else break;
+    }
+    return streak;
+  };
+
+  const totalCompletionRate = allHabits.length > 0
+    ? Math.round((todayDone.filter(d => allHabits.some(h => h.id === d)).length / allHabits.length) * 100)
+    : 0;
+
+  // Last 7 days for mini heatmap
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-amber-500/20 bg-amber-500/5">
+        <CardContent className="pt-4 pb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-display text-base font-semibold flex items-center gap-2">
+                <Zap className="h-5 w-5 text-amber-400" /> Hábitos Quânticos
+              </h3>
+              <p className="text-xs text-muted-foreground">Hábitos que se compõem dia após dia.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-2xl font-bold font-display text-amber-400">{totalCompletionRate}%</p>
+                <p className="text-[10px] text-muted-foreground">hoje</p>
+              </div>
+              <Button size="sm" variant="outline" onClick={() => setConfigMode(v => !v)} className="text-xs">
+                {configMode ? "Fechar" : "Configurar"}
+              </Button>
+            </div>
+          </div>
+          <Progress value={totalCompletionRate} className="h-2 mb-1" />
+        </CardContent>
+      </Card>
+
+      {/* Config mode */}
+      {configMode && (
+        <Card className="border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Selecionar Hábitos</CardTitle>
+            <CardDescription className="text-xs">Escolha os hábitos que quer rastrear durante a Caverna.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {[...DEFAULT_QUANTUM_HABITS, ...customHabits].map(h => (
+                <button key={h.id} onClick={() => toggleSelect(h.id)}
+                  className={`px-2.5 py-1 text-xs rounded-full border transition-all flex items-center gap-1 ${
+                    selected.includes(h.id)
+                      ? "bg-primary/15 border-primary/40 text-primary"
+                      : "bg-secondary/40 border-border text-muted-foreground hover:text-foreground"
+                  }`}>
+                  {h.icon} {h.label}
+                  {selected.includes(h.id) && <Check className="h-2.5 w-2.5" />}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={newHabit}
+                onChange={e => setNewHabit(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addCustom()}
+                placeholder="Adicionar hábito personalizado..."
+                className="text-xs"
+              />
+              <Button size="sm" variant="outline" onClick={addCustom}><Plus className="h-3.5 w-3.5" /></Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Today's habits */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {allHabits.map(h => {
+          const done = todayDone.includes(h.id);
+          const streak = getStreak(h.id);
+          return (
+            <motion.button
+              key={h.id}
+              onClick={() => toggleHabit(h.id)}
+              whileTap={{ scale: 0.97 }}
+              className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                done
+                  ? "border-emerald-500/40 bg-emerald-500/10"
+                  : "border-border bg-card hover:border-primary/30"
+              }`}
+            >
+              <span className="text-xl">{h.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium ${done ? "text-emerald-400 line-through opacity-80" : "text-foreground"}`}>
+                  {h.label}
+                </p>
+                {streak > 0 && (
+                  <p className="text-[10px] text-amber-400 flex items-center gap-1">
+                    <Flame className="h-2.5 w-2.5" /> {streak} dias seguidos
+                  </p>
+                )}
+              </div>
+              <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                done ? "bg-emerald-500 border-emerald-500" : "border-border"
+              }`}>
+                {done && <Check className="h-3.5 w-3.5 text-white" />}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* 7-day heatmap */}
+      {allHabits.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-primary" /> Últimos 7 dias
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-[10px]">
+                <thead>
+                  <tr>
+                    <th className="text-left text-muted-foreground pb-2 pr-2 font-normal w-32">Hábito</th>
+                    {last7.map(d => (
+                      <th key={d} className="text-center text-muted-foreground pb-2 font-normal px-1">
+                        {new Date(d + "T12:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {allHabits.map(h => (
+                    <tr key={h.id}>
+                      <td className="pr-2 py-1 text-muted-foreground truncate max-w-[120px]">{h.icon} {h.label}</td>
+                      {last7.map(d => {
+                        const done = (dailyLogs[d] || []).includes(h.id);
+                        return (
+                          <td key={d} className="text-center py-1 px-1">
+                            <div className={`h-5 w-5 rounded mx-auto ${done ? "bg-emerald-500" : "bg-secondary"}`}>
+                              {done && <Check className="h-3 w-3 text-white m-auto mt-1" />}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+

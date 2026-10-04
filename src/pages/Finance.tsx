@@ -3,13 +3,43 @@ import { motion } from "framer-motion";
 import {
   DollarSign, TrendingUp, TrendingDown, PiggyBank, Target, Plus, Trash2, Edit3, Landmark,
   Flame, Shield, BarChart2, Calculator, Crown, Trophy, AlertTriangle,
-  CheckCircle2, Info, Sparkles, ArrowUpRight, Percent, Clock, RefreshCw
+  CheckCircle2, Info, Sparkles, ArrowUpRight, Percent, Clock, RefreshCw,
+  CreditCard, AlertCircle, Wallet, Bell, XCircle, TrendingUp as TrendUp, Zap
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFinancialEntries, useFinancialGoals, useInvestments } from "@/hooks/useGameData";
+
+// ---- Debt types ----
+type Debt = {
+  id: string;
+  name: string;
+  type: string;
+  total: number;
+  remaining: number;
+  monthlyPayment: number;
+  interestRate: number;
+  dueDay: number;
+};
+
+const DEBT_TYPES = [
+  { value: "cartao", label: "Cartão de Crédito", icon: "💳" },
+  { value: "emprestimo", label: "Empréstimo", icon: "🏦" },
+  { value: "financiamento", label: "Financiamento", icon: "🏠" },
+  { value: "cheque", label: "Cheque Especial", icon: "📝" },
+  { value: "consignado", label: "Consignado", icon: "👔" },
+  { value: "outro", label: "Outro", icon: "💸" },
+];
+
+function loadDebts(): Debt[] {
+  try { return JSON.parse(localStorage.getItem("nexus_debts") || "[]"); } catch { return []; }
+}
+function saveDebts(d: Debt[]) {
+  localStorage.setItem("nexus_debts", JSON.stringify(d));
+}
 
 // ---- Constants ----
 const INVESTMENT_TYPES = [
@@ -295,11 +325,12 @@ export default function Finance() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="overview" className="text-xs gap-1.5"><BarChart2 className="h-3.5 w-3.5" />Visão Geral</TabsTrigger>
-          <TabsTrigger value="fire" className="text-xs gap-1.5"><Flame className="h-3.5 w-3.5" />FIRE</TabsTrigger>
-          <TabsTrigger value="budget" className="text-xs gap-1.5"><Percent className="h-3.5 w-3.5" />Orçamento</TabsTrigger>
-          <TabsTrigger value="simulator" className="text-xs gap-1.5"><Calculator className="h-3.5 w-3.5" />Simulador</TabsTrigger>
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="overview" className="text-xs gap-1"><BarChart2 className="h-3.5 w-3.5" />Geral</TabsTrigger>
+          <TabsTrigger value="fire" className="text-xs gap-1"><Flame className="h-3.5 w-3.5" />FIRE</TabsTrigger>
+          <TabsTrigger value="budget" className="text-xs gap-1"><Percent className="h-3.5 w-3.5" />Orçamento</TabsTrigger>
+          <TabsTrigger value="debts" className="text-xs gap-1"><CreditCard className="h-3.5 w-3.5" />Dívidas</TabsTrigger>
+          <TabsTrigger value="simulator" className="text-xs gap-1"><Calculator className="h-3.5 w-3.5" />Simulador</TabsTrigger>
         </TabsList>
 
         {/* ---- TAB: OVERVIEW ---- */}
@@ -766,6 +797,12 @@ export default function Finance() {
             </div>
           </div>
         </TabsContent>
+
+        {/* ---- TAB: DÍVIDAS ---- */}
+        <TabsContent value="debts" className="mt-4">
+          <DebtTracker income={income} />
+        </TabsContent>
+
       </Tabs>
 
       {/* ---- Dialogs ---- */}
@@ -940,3 +977,289 @@ function EmergencyFundCard({ expenses, currentValue }: { expenses: number; curre
     </div>
   );
 }
+
+// ---- Debt Tracker ----
+function DebtTracker({ income }: { income: number }) {
+  const [debts, setDebts] = useState<Debt[]>(loadDebts);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingDebt, setEditingDebt] = useState<Debt | null>(null);
+  const [strategy, setStrategy] = useState<"snowball" | "avalanche">("avalanche");
+  const [form, setForm] = useState({
+    name: "", type: "cartao", total: "", remaining: "", monthlyPayment: "", interestRate: "", dueDay: "5"
+  });
+
+  const totalDebt = debts.reduce((s, d) => s + d.remaining, 0);
+  const totalMonthly = debts.reduce((s, d) => s + d.monthlyPayment, 0);
+  const debtRatio = income > 0 ? (totalMonthly / income) * 100 : 0;
+
+  const openAdd = () => {
+    setEditingDebt(null);
+    setForm({ name: "", type: "cartao", total: "", remaining: "", monthlyPayment: "", interestRate: "", dueDay: "5" });
+    setDialogOpen(true);
+  };
+  const openEdit = (d: Debt) => {
+    setEditingDebt(d);
+    setForm({ name: d.name, type: d.type, total: String(d.total), remaining: String(d.remaining), monthlyPayment: String(d.monthlyPayment), interestRate: String(d.interestRate), dueDay: String(d.dueDay) });
+    setDialogOpen(true);
+  };
+  const save = () => {
+    if (!form.name || !form.remaining) return;
+    const entry: Debt = {
+      id: editingDebt?.id || Date.now().toString(),
+      name: form.name, type: form.type,
+      total: Number(form.total) || Number(form.remaining),
+      remaining: Number(form.remaining),
+      monthlyPayment: Number(form.monthlyPayment) || 0,
+      interestRate: Number(form.interestRate) || 0,
+      dueDay: Number(form.dueDay) || 5,
+    };
+    const updated = editingDebt
+      ? debts.map(d => d.id === editingDebt.id ? entry : d)
+      : [...debts, entry];
+    setDebts(updated); saveDebts(updated); setDialogOpen(false);
+  };
+  const remove = (id: string) => {
+    const updated = debts.filter(d => d.id !== id);
+    setDebts(updated); saveDebts(updated);
+  };
+  const markPaid = (id: string, amount: number) => {
+    const updated = debts.map(d => d.id === id ? { ...d, remaining: Math.max(0, d.remaining - amount) } : d).filter(d => d.remaining > 0);
+    setDebts(updated); saveDebts(updated);
+  };
+
+  // Sort by strategy
+  const sortedDebts = [...debts].sort((a, b) =>
+    strategy === "snowball" ? a.remaining - b.remaining : b.interestRate - a.interestRate
+  );
+
+  // Payoff projections
+  const projections = debts.map(d => {
+    if (d.monthlyPayment <= 0 || d.interestRate <= 0) return { ...d, months: d.monthlyPayment > 0 ? Math.ceil(d.remaining / d.monthlyPayment) : null };
+    const r = d.interestRate / 100 / 12;
+    const months = Math.log(d.monthlyPayment / (d.monthlyPayment - r * d.remaining)) / Math.log(1 + r);
+    return { ...d, months: Math.ceil(isFinite(months) ? months : d.remaining / d.monthlyPayment) };
+  });
+
+  // Upcoming due days this month
+  const today = new Date().getDate();
+  const upcoming = debts.filter(d => d.dueDay >= today && d.dueDay <= today + 7).sort((a, b) => a.dueDay - b.dueDay);
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-display text-base font-semibold flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-destructive" /> Rastreador de Dívidas
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Controle e elimine suas dívidas com estratégia.</p>
+        </div>
+        <Button onClick={openAdd} size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Adicionar</Button>
+      </div>
+
+      {/* KPI strip */}
+      {debts.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Total Devedor", value: fmtFull(totalDebt), color: totalDebt > 0 ? "text-destructive" : "text-emerald-400", icon: CreditCard },
+            { label: "Pagamento Mensal", value: fmtFull(totalMonthly), color: "text-foreground", icon: Wallet },
+            { label: "Comprometimento", value: `${debtRatio.toFixed(1)}%`, color: debtRatio > 30 ? "text-destructive" : debtRatio > 20 ? "text-amber-400" : "text-emerald-400", icon: Percent },
+            { label: "N° de Dívidas", value: debts.length, color: "text-muted-foreground", icon: AlertCircle },
+          ].map(k => (
+            <div key={k.label} className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <k.icon className={`h-3.5 w-3.5 ${k.color}`} />
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{k.label}</span>
+              </div>
+              <p className={`text-lg font-bold font-display ${k.color}`}>{k.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Spending limit alert */}
+      {debtRatio > 30 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-destructive">⚠️ Comprometimento alto!</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Você está comprometendo <b className="text-destructive">{debtRatio.toFixed(0)}%</b> da sua renda com dívidas.
+              O recomendado é abaixo de 30%. Priorize quitar as dívidas com juros mais altos.
+            </p>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Upcoming payments */}
+      {upcoming.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+          <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+            <Bell className="h-3.5 w-3.5" /> Vencimentos nos próximos 7 dias
+          </h4>
+          <div className="space-y-2">
+            {upcoming.map(d => (
+              <div key={d.id} className="flex items-center justify-between text-sm">
+                <span className="text-foreground">{d.name}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-amber-400 font-bold">{fmtFull(d.monthlyPayment)}</span>
+                  <span className="text-[10px] text-muted-foreground">dia {d.dueDay}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Strategy selector */}
+      {debts.length > 1 && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3">
+          <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Estratégia de Quitação</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={() => setStrategy("avalanche")}
+              className={`rounded-lg border p-3 text-left transition-all ${strategy === "avalanche" ? "border-primary bg-primary/10" : "border-border"}`}>
+              <p className="text-sm font-bold text-foreground">🔥 Avalanche</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Quita primeiro a dívida com maior juros. Economiza mais dinheiro no longo prazo.</p>
+            </button>
+            <button onClick={() => setStrategy("snowball")}
+              className={`rounded-lg border p-3 text-left transition-all ${strategy === "snowball" ? "border-primary bg-primary/10" : "border-border"}`}>
+              <p className="text-sm font-bold text-foreground">❄️ Snowball</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Quita primeiro a menor dívida. Gera mais motivação e momentum psicológico.</p>
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            Ordem sugerida: {sortedDebts.map(d => d.name).join(" → ")}
+          </p>
+        </div>
+      )}
+
+      {/* Debts list */}
+      {debts.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-10 text-center">
+          <CreditCard className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="font-medium text-foreground mb-1">Nenhuma dívida registrada</p>
+          <p className="text-sm text-muted-foreground mb-4">Sem dívidas = liberdade financeira. Se tiver, registre aqui para controlar.</p>
+          <Button onClick={openAdd} size="sm" className="gap-1.5"><Plus className="h-4 w-4" /> Adicionar Dívida</Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {projections.sort((a, b) => {
+            if (strategy === "snowball") return a.remaining - b.remaining;
+            return b.interestRate - a.interestRate;
+          }).map((d, i) => {
+            const paidPct = d.total > 0 ? ((d.total - d.remaining) / d.total) * 100 : 0;
+            const typeInfo = DEBT_TYPES.find(t => t.value === d.type);
+            return (
+              <div key={d.id} className="rounded-xl border border-border bg-card p-4 group hover:border-destructive/30 transition-all">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-destructive/10 border border-destructive/20 flex items-center justify-center shrink-0 text-lg">
+                    {typeInfo?.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      {i === 0 && debts.length > 1 && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/30 text-primary font-bold">FOCO AQUI</span>
+                      )}
+                      <span className="font-medium text-foreground">{d.name}</span>
+                      <span className="text-[9px] text-muted-foreground">{typeInfo?.label}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground mb-2">
+                      <span>Restante: <b className="text-destructive">{fmtFull(d.remaining)}</b></span>
+                      {d.interestRate > 0 && <span>Juros: <b className="text-amber-400">{d.interestRate}% a.m.</b></span>}
+                      {d.monthlyPayment > 0 && <span>Parcela: <b className="text-foreground">{fmtFull(d.monthlyPayment)}</b></span>}
+                      {d.months && <span>Quitação: <b className="text-primary">~{d.months} meses</b></span>}
+                      {d.dueDay > 0 && <span>Vence dia: <b className="text-foreground">{d.dueDay}</b></span>}
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-emerald-500 rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${paidPct}%` }}
+                        transition={{ duration: 0.8 }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[9px] mt-1 text-muted-foreground">
+                      <span>Pago: {paidPct.toFixed(0)}%</span>
+                      <span>Total original: {fmtFull(d.total)}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {d.monthlyPayment > 0 && (
+                      <button onClick={() => markPaid(d.id, d.monthlyPayment)}
+                        title="Registrar pagamento"
+                        className="p-1.5 rounded hover:bg-emerald-500/10 text-muted-foreground hover:text-emerald-400">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button onClick={() => openEdit(d)} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground">
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => remove(d.id)} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-destructive" />
+              {editingDebt ? "Editar Dívida" : "Registrar Dívida"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
+                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Cartão Nubank" />
+              </div>
+              <div className="col-span-2">
+                <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {DEBT_TYPES.map(t => (
+                    <button key={t.value} type="button" onClick={() => setForm({ ...form, type: t.value })}
+                      className={`px-2 py-2 rounded-lg border text-xs flex items-center gap-1.5 transition-all ${form.type === t.value ? "border-destructive/60 bg-destructive/10 text-destructive" : "border-border hover:border-destructive/30"}`}>
+                      <span>{t.icon}</span><span>{t.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Valor Total (R$)</label>
+                <Input type="number" value={form.total} onChange={e => setForm({ ...form, total: e.target.value })} placeholder="0" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Saldo Restante (R$)</label>
+                <Input type="number" value={form.remaining} onChange={e => setForm({ ...form, remaining: e.target.value })} placeholder="0" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Parcela Mensal (R$)</label>
+                <Input type="number" value={form.monthlyPayment} onChange={e => setForm({ ...form, monthlyPayment: e.target.value })} placeholder="0" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Taxa de Juros (% a.m.)</label>
+                <Input type="number" value={form.interestRate} onChange={e => setForm({ ...form, interestRate: e.target.value })} placeholder="0" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Dia de Vencimento</label>
+                <Input type="number" min={1} max={31} value={form.dueDay} onChange={e => setForm({ ...form, dueDay: e.target.value })} placeholder="5" />
+              </div>
+            </div>
+            <Button onClick={save} className="w-full bg-destructive hover:bg-destructive/90">
+              {editingDebt ? "Salvar" : "Registrar Dívida"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
