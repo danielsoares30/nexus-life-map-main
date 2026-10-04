@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 230 15% 8%;
+    --foreground: 45 20% 90%;
+
+    --card: 230 15% 11%;
+    --card-foreground: 45 20% 90%;
+
+    --popover: 230 15% 11%;
+    --popover-foreground: 45 20% 90%;
+
+    --primary: 40 85% 55%;
+    --primary-foreground: 230 15% 8%;
+
+    --secondary: 230 12% 16%;
+    --secondary-foreground: 45 15% 80%;
+
+    --muted: 230 10% 14%;
+    --muted-foreground: 220 10% 50%;
+
+    --accent: 160 60% 40%;
+    --accent-foreground: 160 60% 95%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 230 12% 18%;
+    --input: 230 12% 18%;
+    --ring: 40 85% 55%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 230 15% 6%;
+    --sidebar-foreground: 45 15% 75%;
+    --sidebar-primary: 40 85% 55%;
+    --sidebar-primary-foreground: 230 15% 8%;
+    --sidebar-accent: 230 12% 14%;
+    --sidebar-accent-foreground: 45 20% 90%;
+    --sidebar-border: 230 12% 15%;
+    --sidebar-ring: 40 85% 55%;
+
+    /* Custom QuestLife tokens */
+    --xp: 40 85% 55%;
+    --health: 160 60% 40%;
+    --mana: 220 70% 55%;
+    --strength: 0 65% 55%;
+    --wisdom: 270 50% 55%;
+    --charisma: 320 55% 55%;
+
+    /* Rarity colors */
+    --rarity-common: 220 10% 50%;
+    --rarity-uncommon: 160 60% 40%;
+    --rarity-rare: 220 70% 55%;
+    --rarity-epic: 270 50% 55%;
+    --rarity-legendary: 40 85% 55%;
+
+    --gold-glow: 0 0 20px hsl(40 85% 55% / 0.3);
+    --card-glow: 0 0 30px hsl(40 85% 55% / 0.08);
+    --emerald-glow: 0 0 20px hsl(160 60% 40% / 0.3);
+    --mana-glow: 0 0 20px hsl(220 70% 55% / 0.3);
+    --epic-glow: 0 0 20px hsl(270 50% 55% / 0.3);
+
+    --font-display: 'Cinzel', serif;
+    --font-body: 'Inter', sans-serif;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(40 85% 55%), hsl(45 90% 70%), hsl(35 80% 50%));
+  }
+
+  .text-gradient-epic {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(270 50% 55%), hsl(320 55% 55%), hsl(270 60% 70%));
+  }
+
+  .text-gradient-mana {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(220 70% 55%), hsl(200 80% 60%), hsl(220 80% 70%));
+  }
+
+  .border-glow {
+    box-shadow: var(--gold-glow);
+  }
+
+  .card-glow {
+    box-shadow: var(--card-glow);
+  }
+
+  .epic-glow {
+    box-shadow: var(--epic-glow);
+  }
+
+  .mana-glow {
+    box-shadow: var(--mana-glow);
+  }
+
+  .bg-pattern {
+    background-image: 
+      radial-gradient(circle at 20% 50%, hsl(40 85% 55% / 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, hsl(220 70% 55% / 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 50% 80%, hsl(160 60% 40% / 0.02) 0%, transparent 50%);
+  }
+
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-white/5 shadow-lg;
+  }
+
+  .stat-bar {
+    @apply relative h-2 rounded-full overflow-hidden;
+    background: hsl(var(--muted));
+  }
+
+  .stat-bar-fill {
+    @apply absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out;
+  }
+
+  .xp-fill {
+    background: linear-gradient(90deg, hsl(var(--xp)), hsl(45 90% 65%));
+    box-shadow: 0 0 8px hsl(var(--xp) / 0.5);
+  }
+
+  .health-fill {
+    background: linear-gradient(90deg, hsl(var(--health)), hsl(160 70% 50%));
+    box-shadow: 0 0 8px hsl(var(--health) / 0.5);
+  }
+
+  .mana-fill {
+    background: linear-gradient(90deg, hsl(var(--mana)), hsl(220 80% 65%));
+    box-shadow: 0 0 8px hsl(var(--mana) / 0.5);
+  }
+
+  .wisdom-fill {
+    background: linear-gradient(90deg, hsl(var(--wisdom)), hsl(270 60% 65%));
+    box-shadow: 0 0 8px hsl(var(--wisdom) / 0.5);
+  }
+
+  .strength-fill {
+    background: linear-gradient(90deg, hsl(var(--strength)), hsl(0 75% 60%));
+    box-shadow: 0 0 8px hsl(var(--strength) / 0.5);
+  }
+
+  .charisma-fill {
+    background: linear-gradient(90deg, hsl(var(--charisma)), hsl(320 65% 65%));
+    box-shadow: 0 0 8px hsl(var(--charisma) / 0.5);
+  }
+
+  /* Rarity borders */
+  .rarity-common {
+    @apply border-muted-foreground/30;
+  }
+
+  .rarity-uncommon {
+    border-color: hsl(var(--health) / 0.5);
+    box-shadow: 0 0 6px hsl(var(--health) / 0.1);
+  }
+
+  .rarity-rare {
+    border-color: hsl(var(--mana) / 0.5);
+    box-shadow: 0 0 8px hsl(var(--mana) / 0.15);
+  }
+
+  .rarity-epic {
+    border-color: hsl(var(--wisdom) / 0.5);
+    box-shadow: 0 0 10px hsl(var(--wisdom) / 0.2);
+  }
+
+  .rarity-legendary {
+    border-color: hsl(var(--xp) / 0.6);
+    box-shadow: 0 0 15px hsl(var(--xp) / 0.25);
+  }
+
+  /* Power score ring */
+  .power-ring {
+    background: conic-gradient(
+      hsl(var(--xp)) 0%,
+      hsl(var(--health)) 25%,
+      hsl(var(--mana)) 50%,
+      hsl(var(--wisdom)) 75%,
+      hsl(var(--xp)) 100%
+    );
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* ---- Cave Mode Immersive ---- */
+body.cave-immersive aside,
+body.cave-immersive nav,
+body.cave-immersive [data-sidebar],
+body.cave-immersive .sidebar {
+  display: none !important;
+}
+
+body.cave-immersive main,
+body.cave-immersive [data-main-content] {
+  margin-left: 0 !important;
+  padding-left: 1rem !important;
+  max-width: 100vw !important;
+}
+
+body.cave-immersive {
+  background: hsl(0, 0%, 4%);
+}
+
